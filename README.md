@@ -2,7 +2,7 @@ Exploring two styles of insert that require a look up of identifiers.
 
 Described in the two source files, _example1.scala_ and _example2.scala_.
 
-Example1 is my attempt at an `insert ... select ('foo', select(...), select(...))` style query.
+Example1 is my attempt at an `insert ... select ('foo', select(...), select(...))` style query. The trick in that code with `max` and `asColumnOf` seems a bit stinky.
 
 Example2 is made up of three distinct queries.
 
