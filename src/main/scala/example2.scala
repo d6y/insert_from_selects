@@ -62,12 +62,12 @@ object Example2 extends App {
   // We will want some items sold to insert.
   // (Ok, Alice is both a member of staff and a shopper. I am lazy)
   val sales = Seq(
-    SaleEvent("abacus"    , Some("Alice") , None)          ,
-    SaleEvent("bagpipes"  , None          , Some("Alice")) ,
-    SaleEvent("catapult"  , None          , None)          ,
-    SaleEvent("desk lamp" , Some("Alice") , Some("Alice"))
+    SaleEvent("abacus"       , Some("Alice") , None)          ,
+    SaleEvent("bagpipes"     , None          , Some("Alice")) ,
+    SaleEvent("catapult"     , None          , None)          ,
+    SaleEvent("desk lamp"    , Some("Alice") , Some("Alice")) ,
+    SaleEvent("elbow grease" , Some("Alice") , Some("Bob"))  // <- NB, we have no user called Bob
   )
-
 
   //
   //The difference from Example1 is here

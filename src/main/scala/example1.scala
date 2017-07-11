@@ -63,10 +63,11 @@ object Example1 extends App {
   // We will want some items sold to insert.
   // (Ok, Alice is both a member of staff and a shopper. I am lazy)
   val sales = Seq(
-    SaleEvent("abacus"    , Some("Alice") , None)          ,
-    SaleEvent("bagpipes"  , None          , Some("Alice")) ,
-    SaleEvent("catapult"  , None          , None)          ,
-    SaleEvent("desk lamp" , Some("Alice") , Some("Alice"))
+    SaleEvent("abacus"       , Some("Alice") , None)          ,
+    SaleEvent("bagpipes"     , None          , Some("Alice")) ,
+    SaleEvent("catapult"     , None          , None)          ,
+    SaleEvent("desk lamp"    , Some("Alice") , Some("Alice")) ,
+    SaleEvent("elbow grease" , Some("Alice") , Some("Bob"))  // <- NB, we have no user called Bob
   )
 
   // How to record sales?
@@ -74,13 +75,13 @@ object Example1 extends App {
   def record(sales: Seq[SaleEvent]): DBIO[Seq[Int]] = {
 
     // We want to lookup a user by name, and maybe get back a UserId:
-    def userQ(name: Option[String]) = users.filter(_.name === name).map(_.id).max.asColumnOf[Option[UserId]]
+    // `max` is a trick to get us to a single value, rather than a Seq of values
+    def userQ(name: Option[String]) = users.filter(_.name === name).map(_.id).max
 
     // The values we want to insert consist of a tuple of a stirng, a query, and another query:
     def valuesQ(event: SaleEvent) = Query(
       ( LiteralColumn(event.productName), userQ(event.customerName), userQ(event.assistantName) )
     )
-
 
     // Turn each event into a query:
     val queries = sales.map(event => valuesQ(event))
