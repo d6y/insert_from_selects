@@ -8,12 +8,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
   This example generates SQL that looks like:
  
  select "id" from "app_users" where "name" = 'Alice'
- select "id" from "app_users" where "name" = null
+ select "id" from "app_users" where "name" = 'Bob'
  insert into "sales_log" ("product_name","customer_id","assistant_id")  values (?,?,?)
  */
 object Example2 extends App {
 
-  // This set up is the same as the start of Example1
+  // This set up is similar to Example1, except that we don't distnguish between customers and staff
+  // We only have a table of users, and Alice is the only user.
 
 
   // Let's pretend we receive mesasges from a sales system.
@@ -50,7 +51,7 @@ object Example2 extends App {
   final case class User(name: String, id: UserId = UserId(0L))
 
   final class UserTable(tag: Tag) extends Table[User](tag, "app_users") {
-    def id = column[UserId]("id", O.PrimaryKey, O.AutoInc)
+    def id   = column[UserId]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     
     def * = (name, id).mapTo[User]
@@ -79,7 +80,10 @@ object Example2 extends App {
   def record(sales: Seq[SaleEvent]): DBIO[Seq[Int]] = {
 
     def userAction(name: Option[String]): DBIO[Option[UserId]] =
-      users.filter(_.name === name).map(_.id).result.headOption
+      name match {
+        case Some(n) => users.filter(_.name === n).map(_.id).result.headOption
+        case None    => DBIO.successful(None)
+      }
 
     def insert(event: SaleEvent): DBIO[Int] = for {
       customerId   <- userAction(event.customerName)

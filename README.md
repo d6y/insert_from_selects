@@ -18,6 +18,17 @@ You can run the code from sbt with `runMain Example1` and `runMain Example2`.
 
 The console output shows the queries and the final state of the database, which should be:
 
+For example1:
+```
+SalesLog(abacus,Some(CustomerId(1)),None)
+SalesLog(bagpipes,None,None)
+SalesLog(catapult,None,None)
+SalesLog(desk lamp,Some(CustomerId(1)),None)
+SalesLog(elbow grease,Some(CustomerId(1)),None)
+```
+
+Example 2 is very similar, but with users, rather than the distinction between customers and staff:
+
 ```
 SalesLog(abacus,Some(UserId(1)),None)
 SalesLog(bagpipes,None,Some(UserId(1)))

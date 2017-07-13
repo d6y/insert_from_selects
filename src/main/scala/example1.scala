@@ -27,60 +27,80 @@ object Example1 extends App {
   )
 
   // We want to create a log of these sales, translating the customer and sales assisstant into user IDs.
-  case class UserId(value: Long) extends AnyVal with MappedTo[Long]
+  case class CustomerId(value: Long) extends AnyVal with MappedTo[Long]
+  case class StaffId(value: Long) extends AnyVal with MappedTo[Long]
 
   final case class SalesLog(
     productName    : String,
-    customer       : Option[UserId],
-    salesAssistant : Option[UserId]
+    customer       : Option[CustomerId],
+    salesAssistant : Option[StaffId]
   )
 
 
   // Here's the table defintion for the records we want to store:
   final class LogTable(tag: Tag) extends Table[SalesLog](tag, "sales_log") {
     def productName = column[String]("product_name")
-    def customerId  = column[Option[UserId]]("customer_id")
-    def assistantId = column[Option[UserId]]("assistant_id")
+    def customerId  = column[Option[CustomerId]]("customer_id")
+    def assistantId = column[Option[StaffId]]("assistant_id")
 
     def * = (productName, customerId, assistantId).mapTo[SalesLog]
   }
 
   lazy val salesLog = TableQuery[LogTable]
 
-  // We also need a table for users:
-  final case class User(name: String, id: UserId = UserId(0L))
+  // We also need a table for customers:
+  final case class Customer(name: String, id: CustomerId = CustomerId(0L))
 
-  final class UserTable(tag: Tag) extends Table[User](tag, "app_users") {
-    def id = column[UserId]("id", O.PrimaryKey, O.AutoInc)
+  final class CustomerTable(tag: Tag) extends Table[Customer](tag, "customers") {
+    def id   = column[CustomerId]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
     
-    def * = (name, id).mapTo[User]
+    def * = (name, id).mapTo[Customer]
   }
 
-  lazy val users = TableQuery[UserTable]
+  lazy val customers = TableQuery[CustomerTable]
+
+  // We also need a table for staff:
+  final case class Staff(name: String, id: StaffId = StaffId(0L))
+
+  final class StaffTable(tag: Tag) extends Table[Staff](tag, "staff") {
+    def id   = column[StaffId]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("name")
+    
+    def * = (name, id).mapTo[Staff]
+  }
+
+  lazy val staff = TableQuery[StaffTable]
 
 
   // We will want some items sold to insert.
-  // (Ok, Alice is both a member of staff and a shopper. I am lazy)
   val sales = Seq(
     SaleEvent("abacus"       , Some("Alice") , None)          ,
     SaleEvent("bagpipes"     , None          , Some("Alice")) ,
     SaleEvent("catapult"     , None          , None)          ,
     SaleEvent("desk lamp"    , Some("Alice") , Some("Alice")) ,
-    SaleEvent("elbow grease" , Some("Alice") , Some("Bob"))  // <- NB, we have no user called Bob
+    SaleEvent("elbow grease" , Some("Alice") , Some("Charlie"))  // <- NB, we have no Charlie in our staff
   )
 
   // How to record sales?
   // We take the sales and return the number of rows inserted for each event:
   def record(sales: Seq[SaleEvent]): DBIO[Seq[Int]] = {
 
-    // We want to lookup a user by name, and maybe get back a UserId:
+    // We want to lookup a customers by nname
     // `max` is a trick to get us to a single value, rather than a Seq of values
-    def userQ(name: Option[String]) = users.filter(_.name === name).map(_.id).max
+    def customerQ(name: Option[String]): Rep[Option[CustomerId]] = name match {
+      case Some(n) => customers.filter(_.name === n).map(_.id).max
+      case None    => LiteralColumn(None)
+    }
+
+    def staffQ(name: Option[String]): Rep[Option[StaffId]] = name match {
+      case Some(n) => staff.filter(_.name === n).map(_.id).max
+      case None    => LiteralColumn(None)
+    }
 
     // The values we want to insert consist of a tuple of a stirng, a query, and another query:
     def valuesQ(event: SaleEvent) = Query(
-      ( LiteralColumn(event.productName), userQ(event.customerName), userQ(event.assistantName) )
+      ( LiteralColumn(event.productName), customerQ(event.customerName), staffQ(event.assistantName) )
     )
 
     // Turn each event into a query:
@@ -99,8 +119,9 @@ object Example1 extends App {
   val db = Database.forConfig("example")
 
   val program = for {
-    _            <- (salesLog.schema ++ users.schema).create
-    aliceId      <- users returning users.map(_.id) += User("Alice")
+    _            <- (salesLog.schema ++ customers.schema ++ staff.schema).create
+    aliceId      <- customers returning customers.map(_.id) += Customer("Alice")
+    bobId        <- staff returning staff.map(_.id) += Staff("Bob")
     rowsInserted <- record(sales)
     result       <- salesLog.result
   } yield result
